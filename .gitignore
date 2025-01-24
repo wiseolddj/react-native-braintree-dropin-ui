@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+*.jar
+*.war
+*.ear
+.idea/
+.settings/
+local.properties
+.project/
+
+# React Native
+node_modules/
+*.log
+
+# Xcode
+*.xcworkspace
+*.xcuserdata
+*.xcuserstate
+*.xcodeproj
+DerivedData/

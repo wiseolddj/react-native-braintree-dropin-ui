@@ -128,7 +128,7 @@ RCT_EXPORT_METHOD(show:(NSDictionary*)options resolver:(RCTPromiseResolveBlock)r
                     } else{
                         [[self class] resolvePayment:result deviceData:self.deviceDataCollector resolver:resolve];
                     }
-                } else if(result.paymentMethod == nil && (result.paymentMethodType == 16 || result.paymentMethodType == 17 || result.paymentMethodType == 18)){ //Apple Pay
+                } else if(result.paymentMethod == nil && (result.paymentMethodType == 16 || result.paymentMethodType == 18)){ //Apple Pay
                     // UIViewController *ctrl = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
                     // [ctrl presentViewController:self.viewController animated:YES completion:nil];
                     UIViewController *rootViewController = RCTPresentedViewController();
@@ -144,56 +144,6 @@ RCT_EXPORT_METHOD(show:(NSDictionary*)options resolver:(RCTPromiseResolveBlock)r
     } else {
         reject(@"INVALID_CLIENT_TOKEN", @"The client token seems invalid", nil);
     }
-}
-
-RCT_EXPORT_METHOD(fetchMostRecentPaymentMethod:(NSString*)clientToken
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-{
-  [BTDropInResult mostRecentPaymentMethodForClientToken:clientToken completion:^(BTDropInResult * _Nullable result, NSError * _Nullable error) {
-    if (error != nil) {
-        reject(error.localizedDescription, error.localizedDescription, error);
-    } else if (result.canceled) {
-        reject(@"USER_CANCELLATION", @"The user cancelled", nil);
-    } else {
-      [[self class] resolvePayment:result deviceData:result.deviceData resolver:resolve];
-    }
-  }];
-}
-
-RCT_EXPORT_METHOD(tokenizeCard:(NSString*)clientToken
-                          info:(NSDictionary*)cardInfo
-                      resolver:(RCTPromiseResolveBlock)resolve
-                      rejecter:(RCTPromiseRejectBlock)reject)
-{
-    NSString *number = cardInfo[@"number"];
-    NSString *expirationMonth = cardInfo[@"expirationMonth"];
-    NSString *expirationYear = cardInfo[@"expirationYear"];
-    NSString *cvv = cardInfo[@"cvv"];
-    NSString *postalCode = cardInfo[@"postalCode"];
-
-    if (!number || !expirationMonth || !expirationYear || !cvv || !postalCode) {
-        reject(@"INVALID_CARD_INFO", @"Invalid card info", nil);
-        return;
-    }
-    
-    BTAPIClient *braintreeClient = [[BTAPIClient alloc] initWithAuthorization:clientToken];
-    BTCardClient *cardClient = [[BTCardClient alloc] initWithAPIClient:braintreeClient];
-    BTCard *card = [[BTCard alloc] init];
-    card.number = number;
-    card.expirationMonth = expirationMonth;
-    card.expirationYear = expirationYear;
-    card.cvv = cvv;
-    card.postalCode = postalCode;
-
-    [cardClient tokenizeCard:card
-                  completion:^(BTCardNonce *tokenizedCard, NSError *error) {
-        if (error == nil) {
-            resolve(tokenizedCard.nonce);
-        } else {
-            reject(@"TOKENIZE_ERROR", @"Error tokenizing card.", error);
-        }
-    }];
 }
 
 - (void)paymentAuthorizationViewController:(PKPaymentAuthorizationViewController *)controller
@@ -230,6 +180,56 @@ RCT_EXPORT_METHOD(tokenizeCard:(NSString*)clientToken
 
             // Indicate failure via the completion callback:
             completion([[PKPaymentAuthorizationResult alloc] initWithStatus:PKPaymentAuthorizationStatusFailure errors:nil]);
+        }
+    }];
+}
+
+RCT_EXPORT_METHOD(fetchMostRecentPaymentMethod:(NSString*)clientToken
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  [BTDropInResult mostRecentPaymentMethodForClientToken:clientToken completion:^(BTDropInResult * _Nullable result, NSError * _Nullable error) {
+    if (error != nil) {
+        reject(error.localizedDescription, error.localizedDescription, error);
+    } else if (result.canceled) {
+        reject(@"USER_CANCELLATION", @"The user cancelled", nil);
+    } else {
+      [[self class] resolvePayment:result deviceData:result.deviceData resolver:resolve];
+    }
+  }];
+}
+
+RCT_EXPORT_METHOD(tokenizeCard:(NSString*)clientToken
+                          info:(NSDictionary*)cardInfo
+                      resolver:(RCTPromiseResolveBlock)resolve
+                      rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSString *number = cardInfo[@"number"];
+    NSString *expirationMonth = cardInfo[@"expirationMonth"];
+    NSString *expirationYear = cardInfo[@"expirationYear"];
+    NSString *cvv = cardInfo[@"cvv"];
+    NSString *postalCode = cardInfo[@"postalCode"];
+
+    if (!number || !expirationMonth || !expirationYear || !cvv || !postalCode) {
+        reject(@"INVALID_CARD_INFO", @"Invalid card info", nil);
+        return;
+    }
+
+    BTAPIClient *braintreeClient = [[BTAPIClient alloc] initWithAuthorization:clientToken];
+    BTCardClient *cardClient = [[BTCardClient alloc] initWithAPIClient:braintreeClient];
+    BTCard *card = [[BTCard alloc] init];
+    card.number = number;
+    card.expirationMonth = expirationMonth;
+    card.expirationYear = expirationYear;
+    card.cvv = cvv;
+    card.postalCode = postalCode;
+
+    [cardClient tokenizeCard:card
+                  completion:^(BTCardNonce *tokenizedCard, NSError *error) {
+        if (error == nil) {
+            resolve(tokenizedCard.nonce);
+        } else {
+            reject(@"TOKENIZE_ERROR", @"Error tokenizing card.", error);
         }
     }];
 }
